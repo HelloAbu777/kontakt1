@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMS Yuboruvchi</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: #2a2a3d;
+    --accent: #6c63ff;
+    --accent2: #ff6b6b;
+    --accent3: #43e97b;
+    --text: #f0f0f8;
+    --muted: #7070a0;
+    --selected-bg: rgba(108,99,255,0.15);
+    --selected-border: #6c63ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 10%, rgba(108,99,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(67,233,123,0.07) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .logo {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 24px rgba(108,99,255,0.4);
+  }
+  header h1 { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+  header h1 span { color: var(--accent); }
+  .badge {
+    margin-left: auto;
+    background: rgba(67,233,123,0.12);
+    border: 1px solid rgba(67,233,123,0.3);
+    color: var(--accent3);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+  .panel-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+  }
+  .panel-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .panel-header .count {
+    background: var(--selected-bg);
+    border: 1px solid var(--selected-border);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .search-wrap { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 14px 9px 36px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .search-icon { position: absolute; left: 28px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; pointer-events: none; }
+  .search-rel { position: relative; }
+  .select-all-row {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .select-all-row:hover { background: rgba(108,99,255,0.05); }
+  .select-all-row span { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .contact-list { max-height: 420px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(42,42,61,0.5);
+    transition: background 0.15s;
+    position: relative;
+  }
+  .contact-item:hover { background: rgba(108,99,255,0.05); }
+  .contact-item.selected { background: var(--selected-bg); }
+  .contact-item.selected::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+  .avatar {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .contact-info { flex: 1; min-width: 0; }
+  .contact-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .contact-phone { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .check {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .contact-item.selected .check { background: var(--accent); border-color: var(--accent); }
+  .check svg { display: none; }
+  .contact-item.selected .check svg { display: block; }
+  .right-panel { display: flex; flex-direction: column; gap: 16px; }
+  .msg-panel .panel-body { padding: 20px; }
+  .msg-panel textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    resize: none;
+    outline: none;
+    min-height: 140px;
+    line-height: 1.6;
+    transition: border-color 0.2s;
+  }
+  .msg-panel textarea:focus { border-color: var(--accent); }
+  .msg-panel textarea::placeholder { color: var(--muted); }
+  .char-count { text-align: right; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .quick-wrap { padding: 0 20px 16px; }
+  .quick-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+  .quick-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .quick-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .quick-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--selected-bg); }
+  .send-section { padding: 20px; border-top: 1px solid var(--border); }
+  .selected-preview {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .selected-preview strong { color: var(--text); }
+  .selected-preview .nums { color: var(--accent); font-weight: 500; }
+  .send-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border: none;
+    border-radius: 14px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 20px rgba(108,99,255,0.35);
+  }
+  .send-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(108,99,255,0.5); }
+  .send-btn:active { transform: translateY(0); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .send-btn .icon { font-size: 20px; }
+  .stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; text-align: center; }
+  .stat-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--accent3);
+    color: var(--accent3);
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 50;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    width: 380px;
+    max-width: 90vw;
+    transform: scale(0.95);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: scale(1); }
+  .modal h3 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .field input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel {
+    flex: 1; padding: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-add {
+    flex: 1; padding: 10px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all 0.15s;
+  }
+  .btn-add:hover { background: #7c73ff; }
+  .add-contact-btn {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .add-contact-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* JSON info box */
+  .info-box {
+    background: rgba(108,99,255,0.08);
+    border: 1px solid rgba(108,99,255,0.25);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0 16px 12px;
+  }
+  .info-box strong { color: var(--accent); }
+
+  /* Loading */
+  .loading-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* JSON editor modal */
+  .json-editor {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    color: var(--accent3);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    resize: none;
+    outline: none;
+    min-height: 200px;
+    line-height: 1.5;
+  }
+  .json-editor:focus { border-color: var(--accent); }
+  .error-msg { color: var(--accent2); font-size: 12px; margin-top: 8px; display: none; }
+  .error-msg.show { display: block; }
+
+  .top-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+  .icon-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">💬</div>
+    <h1>SMS <span>Yuboruvchi</span></h1>
+    <div class="badge">✓ Samsung Ready</div>
+  </header>
+
+  <div class="stats-bar" style="margin-bottom:20px">
+    <div class="stat-card">
+      <div class="stat-val" id="totalCount">—</div>
+      <div class="stat-label">Jami kontakt</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="selectedCount">0</div>
+      <div class="stat-label">Tanlangan</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="sentCount">0</div>
+      <div class="stat-label">Yuborilgan</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Contacts Panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>👥</span>
+        <h2>Kontaktlar</h2>
+        <div class="count" id="selBadge">0 ta</div>
+        <div class="top-actions">
+          <button class="add-contact-btn" onclick="openModal('add')">+ Qo'shish</button>
+          <button class="icon-btn" onclick="openModal('json')" title="JSON tahrirlash">⚙️ JSON</button>
+        </div>
+      </div>
+
+      <div class="info-box">
+        Kontaktlar <strong>contacts.json</strong> faylidan yuklanadi.<br>
+        Tahrirlash uchun <strong>⚙️ JSON</strong> tugmasini bosing yoki faylni bevosita o'zgartiring.
+      </div>
+
+      <div class="search-wrap">
+        <div class="search-rel">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Ism yoki telefon qidirish..." oninput="filterContacts()">
+        </div>
+      </div>
+
+      <div class="select-all-row" onclick="toggleAll()">
+        <div class="check" id="allCheck">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+            <path d="M1 5L4.5 8.5L11 1.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span>Barchasini tanlash</span>
+      </div>
+
+      <div class="contact-list" id="contactList">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          contacts.json yuklanmoqda...
+        </div>
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-panel">
+      <div class="panel msg-panel">
+        <div class="panel-header">
+          <span>✍️</span>
+          <h2>Xabar yozish</h2>
+        </div>
+        <div class="panel-body">
+          <textarea id="msgText" placeholder="Bu yerga SMS matningizni yozing..." oninput="updateCharCount()"></textarea>
+          <div class="char-count"><span id="charCount">0</span> / 160 belgi</div>
+        </div>
+        <div class="quick-wrap">
+          <div class="quick-label">Tezkor xabarlar</div>
+          <div class="quick-btns">
+            <button class="quick-btn" onclick="setQuick('Salom! Siz bilan bog\'lanmoqchi edim.')">Salom!</button>
+            <button class="quick-btn" onclick="setQuick('Iltimos, telefon qilib qo\'ying.')">Qo'ng'iroq qiling</button>
+            <button class="quick-btn" onclick="setQuick('Yig\'ilish bugun soat 15:00 da.')">Yig'ilish eslatma</button>
+            <button class="quick-btn" onclick="setQuick('Buyurtmangiz tayyor. Olib keta olasiz.')">Buyurtma tayyor</button>
+            <button class="quick-btn" onclick="setQuick('Ish vaqti: 9:00-18:00. Kiring!')">Ish vaqti</button>
+          </div>
+        </div>
+        <div class="send-section">
+          <div class="selected-preview" id="preview">Hech qanday kontakt tanlanmagan.</div>
+          <button class="send-btn" id="sendBtn" onclick="sendSMS()" disabled>
+            <span class="icon">🚀</span>
+            Barchaga SMS Yuborish
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Contact Modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h3>➕ Yangi Kontakt</h3>
+    <div class="field">
+      <label>Ism Familiya</label>
+      <input type="text" id="newName" placeholder="Masalan: Alisher Karimov">
+    </div>
+    <div class="field">
+      <label>Telefon Raqam</label>
+      <input type="tel" id="newPhone" placeholder="+998901234567">
+    </div>
+    <div class="field">
+      <label>Lavozim (ixtiyoriy)</label>
+      <input type="text" id="newRole" placeholder="Masalan: Menejer">
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px;">
+      ⚠️ Bu faqat joriy sessiya uchun. Doimiy saqlash uchun <strong>contacts.json</strong> faylini yangilang.
+    </p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('add')">Bekor</button>
+      <button class="btn-add" onclick="addContact()">Qo'shish</button>
+    </div>
+  </div>
+</div>
+
+<!-- JSON Editor Modal -->
+<div class="modal-overlay" id="jsonModal">
+  <div class="modal" style="width:520px">
+    <h3>⚙️ contacts.json tahrirlash</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
+      Quyidagi JSON ni o'zgartiring va <strong>Saqlash</strong> ni bosing. Bu faqat joriy sessiyada ishlaydi.<br>
+      Doimiy o'zgarish uchun <strong>contacts.json</strong> faylini to'g'ridan-to'g'ri yangilang.
+    </p>
+    <textarea class="json-editor" id="jsonEditor" rows="12"></textarea>
+    <div class="error-msg" id="jsonError">❌ JSON formati noto'g'ri. Iltimos, tekshiring.</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('json')">Bekor</button>
+      <button class="btn-add" onclick="saveJson()">💾 Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">✅ SMS yuborildi!</div>
+
+<script>
+let contacts = [];
+let filtered = [];
+let selected = new Set();
+let sentCount = 0;
+let nextId = 1000;
+
+// ─── Load contacts.json ──────────────────────────────────────────
+async function loadContacts() {
+  try {
+    const res = await fetch('./contacts.json?t=' + Date.now());
+    if (!res.ok) throw new Error('Fayl topilmadi');
+    contacts = await res.json();
+    filtered = [...contacts];
+    renderList();
+    showToast('✅ ' + contacts.length + ' ta kontakt yuklandi');
+  } catch(e) {
+    document.getElementById('contactList').innerHTML = `
+      <div class="loading-state">
+        <div style="font-size:32px;margin-bottom:8px">⚠️</div>
+        <strong style="color:var(--accent2)">contacts.json topilmadi</strong><br>
+        <span style="font-size:12px">Faylni sayt papkasiga qo'ying</span>
+      </div>`;
+    document.getElementById('totalCount').textContent = '!';
+  }
+}
+
+// ─── Render ──────────────────────────────────────────────────────
+function initials(name) {
+  return name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+}
+
+function renderList() {
+  const list = document.getElementById('contactList');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="loading-state">Kontakt topilmadi</div>';
+    updateUI(); return;
+  }
+  list.innerHTML = '';
+  filtered.forEach(c => {
+    const sel = selected.has(c.id);
+    const div = document.createElement('div');
+    div.className = 'contact-item' + (sel ? ' selected' : '');
+    div.onclick = () => toggle(c.id);
+    div.innerHTML = `
+      <div class="avatar" style="background:${c.color}22;color:${c.color}">${initials(c.name)}</div>
+      <div class="contact-info">
+        <div class="contact-name">${c.name}</div>
+        <div class="contact-phone">${c.phone}${c.role ? ' · ' + c.role : ''}</div>
+      </div>
+      <div class="check">
+        <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+          <path d="M1 5L4.5 8.5L11 1.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>`;
+    list.appendChild(div);
+  });
+  updateUI();
+}
+
+function updateUI() {
+  const selArr = contacts.filter(c => selected.has(c.id));
+  document.getElementById('selectedCount').textContent = selected.size;
+  document.getElementById('totalCount').textContent = contacts.length;
+  document.getElementById('sentCount').textContent = sentCount;
+  document.getElementById('selBadge').textContent = selected.size + ' ta';
+
+  const btn = document.getElementById('sendBtn');
+  const msg = document.getElementById('msgText').value.trim();
+  btn.disabled = selected.size === 0 || msg.length === 0;
+
+  const preview = document.getElementById('preview');
+  if (!selArr.length) {
+    preview.innerHTML = 'Hech qanday kontakt tanlanmagan. Chapdan kontakt tanlang.';
+  } else {
+    const nums = selArr.map(c => `<span class="nums">${c.phone}</span>`).join(', ');
+    preview.innerHTML = `<strong>${selArr.length} ta</strong> kontaktga yuboriladi: ${nums}`;
+  }
+
+  const allSel = filtered.length > 0 && filtered.every(c => selected.has(c.id));
+  const chk = document.getElementById('allCheck');
+  chk.style.background = allSel ? 'var(--accent)' : '';
+  chk.style.borderColor = allSel ? 'var(--accent)' : '';
+}
+
+function toggle(id) {
+  if (selected.has(id)) selected.delete(id);
+  else selected.add(id);
+  renderList();
+}
+
+function toggleAll() {
+  const allSel = filtered.every(c => selected.has(c.id));
+  if (allSel) filtered.forEach(c => selected.delete(c.id));
+  else filtered.forEach(c => selected.add(c.id));
+  renderList();
+}
+
+function filterContacts() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  filtered = contacts.filter(c =>
+    c.name.toLowerCase().includes(q) || c.phone.includes(q)
+  );
+  renderList();
+}
+
+function updateCharCount() {
+  document.getElementById('charCount').textContent = document.getElementById('msgText').value.length;
+  updateUI();
+}
+
+function setQuick(text) {
+  document.getElementById('msgText').value = text;
+  updateCharCount();
+}
+
+// ─── SMS Yuborish ────────────────────────────────────────────────
+function sendSMS() {
+  const msg = document.getElementById('msgText').value.trim();
+  if (!msg || selected.size === 0) return;
+  const selContacts = contacts.filter(c => selected.has(c.id));
+  const phones = selContacts.map(c => c.phone).join(';');
+  const smsUri = `sms:${phones}?body=${encodeURIComponent(msg)}`;
+  window.location.href = smsUri;
+  sentCount += selContacts.length;
+  showToast(`📱 ${selContacts.length} ta kontaktga SMS oynasi ochildi!`);
+  updateUI();
+}
+
+// ─── Modals ──────────────────────────────────────────────────────
+function openModal(type) {
+  if (type === 'add') {
+    document.getElementById('addModal').classList.add('open');
+    document.getElementById('newName').focus();
+  } else {
+    document.getElementById('jsonEditor').value = JSON.stringify(contacts, null, 2);
+    document.getElementById('jsonError').classList.remove('show');
+    document.getElementById('jsonModal').classList.add('open');
+  }
+}
+
+function closeModal(type) {
+  if (type === 'add') {
+    document.getElementById('addModal').classList.remove('open');
+    document.getElementById('newName').value = '';
+    document.getElementById('newPhone').value = '';
+    document.getElementById('newRole').value = '';
+  } else {
+    document.getElementById('jsonModal').classList.remove('open');
+  }
+}
+
+function addContact() {
+  const name  = document.getElementById('newName').value.trim();
+  const phone = document.getElementById('newPhone').value.trim();
+  const role  = document.getElementById('newRole').value.trim() || '';
+  if (!name || !phone) { alert('Ism va telefon raqam kiritish shart!'); return; }
+  const colors = ['#6c63ff','#ff6b6b','#43e97b','#f7971e','#c471ed','#12c2e9','#f64f59'];
+  const c = { id: nextId++, name, phone, role, color: colors[Math.floor(Math.random()*colors.length)] };
+  contacts.push(c);
+  filterContacts();
+  closeModal('add');
+  showToast(`✅ ${name} qo'shildi! (contacts.json ni ham yangilang)`);
+}
+
+function saveJson() {
+  try {
+    const parsed = JSON.parse(document.getElementById('jsonEditor').value);
+    if (!Array.isArray(parsed)) throw new Error('Array bo\'lishi kerak');
+    contacts = parsed;
+    filtered = [...contacts];
+    selected.clear();
+    renderList();
+    closeModal('json');
+    showToast('✅ Kontaktlar yangilandi!');
+  } catch(e) {
+    document.getElementById('jsonError').classList.add('show');
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Outside click closes modals
+['addModal','jsonModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) closeModal(id === 'addModal' ? 'add' : 'json');
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal('add'); closeModal('json'); }
+});
+
+// ─── Init ────────────────────────────────────────────────────────
+loadContacts();
+</script>
+</body>
+</html>
